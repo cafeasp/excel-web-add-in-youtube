@@ -1,6 +1,78 @@
 <div class="text-center pt-4">
     <h1 class="display-6 title">YouTube Demo App. Hello.</h1>
 
-    <button class="btn btn-primary">Order pizza</button>
+    <input type="number" class="form-control" id="zipCode">
+    <button class="btn btn-primary" onclick="getWeather()">Get Weather</button>
 </div>
 <div class="text-center description">An Excel Web Add-in</div>
+<div id="weatherData">
+    <p class="fw-bold">Location</p>
+    <p id="location"></p>
+    <p class="fw-bold">Temperature</p>
+    <p id="temperature"></p>
+
+    <img id="icon" src="" alt="Weather icon">
+    <p class="fw-bold">Condition</p>
+    <p id="condition"></p>
+</div>
+<script>
+    $(document).ready(function () {
+        checkExcel();
+    });
+    function getWeather() {
+        let zip = document.getElementById('zipCode').value;
+        if (zip) {
+            var data = {
+                zip: zip
+            };
+            $.ajax({
+                url: '/weather',
+                type: 'POST',
+                data: JSON.stringify(data),
+                contentType: 'application/json',
+                success: function (data) {
+
+                    $('#location').text(data.location);
+                    $('#temperature').text(data.temperature);
+                    $('#condition').text(data.forcast_condition + ' (' + data.daily_chance_of_rain + '%' + ')');
+
+                    $('#icon').attr('src', data.forcast_icon);
+
+                    writeData([{ temp: data.temperature }, { loc: data.location }, { cond: data.forcast_condition }]);
+
+                }
+            });
+        }
+    }
+    function checkExcel() {
+        Office.onReady((info) => {
+            if (info.host === Office.HostType.Excel) {
+                console.log("Excel is ready");
+            } else {
+                console.log("Excel is not ready");
+                window.location.href = "/noexcel";
+            }
+        });
+    }
+    function writeData(data) {
+        if (data) {
+
+            Excel.run(function (context) {
+                const sheet = context.workbook.worksheets.getActiveWorksheet();
+
+                const rangeAddress = `A${1}:A${3}`;
+                console.log(rangeAddress);
+                const range = sheet.getRange(rangeAddress);
+                range.clear();
+                let dataArray = data.map((obj) => Object.values(obj));
+                range.values = dataArray;
+                range.format.autofitColumns();
+
+                return context.sync();
+            }).then(function () {
+                console.log('done');
+            });
+
+        }
+    }
+</script>
